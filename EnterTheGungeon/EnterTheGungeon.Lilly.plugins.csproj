@@ -49,6 +49,7 @@
     <Reference Include="BepInEx.Preloader">
       <HintPath>F:\EnterTheGungeon\BepInEx\core\BepInEx.Preloader.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Mono.Cecil">
       <HintPath>F:\EnterTheGungeon\BepInEx\core\Mono.Cecil.dll</HintPath>
     </Reference>
