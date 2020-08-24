@@ -17,10 +17,14 @@ namespace EnterTheGungeon.Lilly.plugins
     {
         private ConfigEntry<string> configGreeting;
         private ConfigEntry<bool> configDisplayGreeting;
+        
+        public static bool ShowHide = false;
+
+        public static string stringToEdit = "only num";
 
         void Awake()
         {
-            UnityEngine.Debug.Log("Lilly. Hello, world!");
+            UnityEngine.Debug.LogError("Lilly. Awake!");
 /*
             configGreeting = Config.Bind("General",   // The section under which the option is shown
                              "GreetingText",  // The key of the configuration option in the configuration file
@@ -34,11 +38,6 @@ namespace EnterTheGungeon.Lilly.plugins
             //Logger.LogInfo("Hello, world!");
 */
         }
-
-
-        public static bool ShowHide = false;
-
-        public static string stringToEdit = "only num";
 
         // OnGUI 메소드 이름 변경 금지. 유니티에서 자동으로 호출함
         private void OnGUI()
