@@ -156,7 +156,7 @@ namespace EnterTheGungeon.Lilly.plugins
                     }
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "아이템9개 소지"))
+                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "아이템99개 소지"))
                 {
                     SetMAX_HELD9();
                 }
@@ -164,6 +164,16 @@ namespace EnterTheGungeon.Lilly.plugins
                 if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "저주 제거"))
                 {
                     SetClearCurse();
+                }                
+
+
+                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Drop Passive all"))
+                {
+                    SetDropPassive(true);
+                }                
+                if (GUI.Button(new Rect(25f+ 170f, sz * ct++, 170f, 30f), "Drop Passive last"))
+                {
+                    SetDropPassive(false);
                 }
 
                 stringToEdit = GUI.TextField(new Rect(25f, sz * ct, 170f, 30f), stringToEdit);
@@ -556,6 +566,35 @@ namespace EnterTheGungeon.Lilly.plugins
                 }
             }
         }
+    
+        public static void SetDropPassive(bool all)
+        {
+            for (int i = 0; i < GameManager.Instance.AllPlayers.Length; i++)
+            {
+                PlayerController player = GameManager.Instance.AllPlayers[i];
+                if (player && player.healthHaver.IsAlive)
+                {
+                    if (player.passiveItems != null)
+                    {
+                        if (all)
+                        {
+                            //player.maxActiveItemsHeld = player.MAX_ITEMS_HELD + (int)player.stats.GetStatValue(PlayerStats.StatType.AdditionalItemCapacity);
+                            while (0 < player.passiveItems.Count)
+                            {
+                                //player.DropActiveItem(player.activeItems[player.activeItems.Count - 1], 4f, false);
+                                player.DropPassiveItem(player.passiveItems[player.passiveItems.Count - 1]);
+                            }
+                        }
+                        else
+                        {
+                                player.DropPassiveItem(player.passiveItems[player.passiveItems.Count - 1]);
+                        }
+
+                    }
+                }
+            }
+        }    
+
     }
 
 }
