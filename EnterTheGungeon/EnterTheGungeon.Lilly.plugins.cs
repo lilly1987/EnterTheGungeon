@@ -99,9 +99,13 @@ namespace EnterTheGungeon.Lilly.plugins
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(224).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
-                if (GUI.Button(new Rect(25f + 170f, sz * ct++, 170f, 30f), "Set 99 Blank"))
+                if (GUI.Button(new Rect(25f + 170f, sz * ct, 170f, 30f), "Set 99 Blank"))
                 {
                     SetBlank99();
+                }
+                if (GUI.Button(new Rect(25f + 170f*2, sz * ct++, 170f, 30f), "Blank!"))
+                {
+                    SetForceBlank();
                 }
 
                 if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Give Armor"))
@@ -170,6 +174,11 @@ namespace EnterTheGungeon.Lilly.plugins
                 if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "저주 제거"))
                 {
                     SetClearCurse();
+                }      
+
+                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "저주템"))
+                {
+                    SetMyItemCurse();
                 }                
 
 
@@ -705,6 +714,48 @@ namespace EnterTheGungeon.Lilly.plugins
             }
         }
 
+        public static void SetMyItemCurse()
+        {
+            int[] my2 = new int[]
+            {
+                443//
+                ,821    //스카우터
+                ,65
+                ,822    //카타나 총탄
+                ,579    //공포탄 총탄
+                ,571    //저주받은 총탄
+                ,276    //스파이스
+                ,631    //뻥뻥 성배   Blank Personality   BlankPersonality
+                ,285    //핏빛 브로치  Blood Brooch    VampiricArmor
+                ,525    //비탄의 상자
+                ,407    //여섯 번째 방
+                ,166    //쉘레톤 열쇠
+                ,439    //브래킷 열쇠
+                ,499    //오래된 공포탄
+                ,570    //노란 약실
+
+                ,762    //완성된 총
+            };
+                        
+
+            PickupObject o;
+            for (int i = 0; i < my2.Length; i++)
+            {
+                try
+                {
+                    if ((o = PickupObjectDatabase.GetById(my2[i])) != null)
+                    {
+                        LootEngine.TryGivePrefabToPlayer(o.gameObject, GameManager.Instance.PrimaryPlayer, true);
+                    }
+                }
+                catch (Exception)
+                {
+                    UnityEngine.Debug.Log("해당 아이템 없음:" + i);
+                }
+            }
+        }
+
+
         public static void SetHealthMaximum()
         {
             for (int i = 0; i < GameManager.Instance.AllPlayers.Length; i++)
@@ -792,7 +843,7 @@ namespace EnterTheGungeon.Lilly.plugins
                 if (playerController && playerController.healthHaver.IsAlive)
                 {
                     StatModifier statModifier = new StatModifier();
-                    statModifier.amount = (float)(PlayerStats.GetTotalCurse() * -1);
+                    statModifier.amount = -100f;
                     statModifier.modifyType = StatModifier.ModifyMethod.ADDITIVE;
                     statModifier.statToBoost = PlayerStats.StatType.Curse;
                     playerController.ownerlessStatModifiers.Add(statModifier);
@@ -803,6 +854,7 @@ namespace EnterTheGungeon.Lilly.plugins
     
         public static void SetDropPassive(bool all)
         {
+            int k;
             for (int i = 0; i < GameManager.Instance.AllPlayers.Length; i++)
             {
                 PlayerController player = GameManager.Instance.AllPlayers[i];
@@ -813,22 +865,38 @@ namespace EnterTheGungeon.Lilly.plugins
                         if (all)
                         {
                             //player.maxActiveItemsHeld = player.MAX_ITEMS_HELD + (int)player.stats.GetStatValue(PlayerStats.StatType.AdditionalItemCapacity);
-                            while (0 < player.passiveItems.Count)
+                            //while (1 < player.passiveItems.Count)
+                            for (k= player.passiveItems.Count;k>0 ;k--)
                             {
-                                //player.DropActiveItem(player.activeItems[player.activeItems.Count - 1], 4f, false);
-                                player.DropPassiveItem(player.passiveItems[player.passiveItems.Count - 1]);
+                                if (player.passiveItems[k - 1].CanBeDropped)
+                                    //player.DropActiveItem(player.activeItems[player.activeItems.Count - 1], 4f, false);
+                                    player.DropPassiveItem(player.passiveItems[k - 1]);
                             }
                         }
                         else
                         {
-                            if (0 < player.passiveItems.Count)
-                                player.DropPassiveItem(player.passiveItems[player.passiveItems.Count - 1]);
+                            k = player.passiveItems.Count;
+                            if (1 < k)
+                                if (player.passiveItems[k - 1].CanBeDropped)
+                                    player.DropPassiveItem(player.passiveItems[k - 1]);
                         }
 
                     }
                 }
             }
-        }    
+        }
+
+        public static void SetForceBlank()
+        {
+            for (int i = 0; i < GameManager.Instance.AllPlayers.Length; i++)
+            {
+                PlayerController player = GameManager.Instance.AllPlayers[i];
+                if (player && player.healthHaver.IsAlive)
+                {
+                    player.ForceBlank(25f, 0.5f, false, true, null, true, -1f);
+                }
+            }
+        }
 
     }
 
