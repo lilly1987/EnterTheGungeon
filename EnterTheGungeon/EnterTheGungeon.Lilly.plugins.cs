@@ -171,12 +171,12 @@ namespace EnterTheGungeon.Lilly.plugins
                     SetMAX_HELD9();
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "저주 제거"))
+                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "저주 제거"))
                 {
                     SetClearCurse();
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "저주템"))
+                if (GUI.Button(new Rect(25f+ 170f, sz * ct++, 170f, 30f), "저주템"))
                 {
                     SetMyItemCurse();
                 }
