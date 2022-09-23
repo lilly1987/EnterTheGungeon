@@ -1,164 +1,278 @@
-﻿using BepInEx.Configuration;
+﻿using BepInEx;
+using BepInEx.Configuration;
+using BepInEx.Logging;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Collections;
-using Dungeonator;
-using UnityEngine;
-using BepInEx;
-using Microsoft.VisualBasic.FileIO;
 using System.Text.RegularExpressions;
+using UnityEngine;
 
-namespace EnterTheGungeon.Lilly.plugins
+namespace BepInPluginSample
 {
-    [BepInPlugin("EnterTheGungeon.Lilly.plugins", "EnterTheGungeon Cheat", "1.0.0.0")]
-    //[BepInProcess("EtG.exe")]
-    public class LillyPlugin : BaseUnityPlugin
+    [BepInPlugin("Game.Lilly.Plugin", "Lilly", "1.0")]
+    public class Lilly : BaseUnityPlugin
     {
-        private ConfigEntry<string> configGreeting;
-        private ConfigEntry<bool> configDisplayGreeting;
+        public static ManualLogSource logger;
 
-        public static bool ShowHide = false;
+        static Harmony harmony;
+
+        public ConfigEntry<BepInEx.Configuration.KeyboardShortcut> ShowCounter;
+        public ConfigEntry<BepInEx.Configuration.KeyboardShortcut> ShowCounter2;
+
+        private ConfigEntry<bool> isGUIOn;
+        private ConfigEntry<bool> isOpen;
+        private ConfigEntry<float> uiW;
+        private ConfigEntry<float> uiH;
+
+        public int windowId = 542;
+        public Rect windowRect;
+
+        public string title = "";
+        public string windowName = ""; // 변수용 
+        public string FullName = "Plugin"; // 창 펼쳤을때
+        public string ShortName = "P"; // 접었을때
+
+        GUILayoutOption h;
+        GUILayoutOption w;
+        public Vector2 scrollPosition;
+
+        // ==================
 
         public static string stringToEdit = "only num";
         public static string myitem = "myitem.txt";
 
-        void Awake()
+
+        public void Awake()
         {
-            UnityEngine.Debug.LogError("Lilly. Awake!");
+            logger = Logger;
+            Logger.LogMessage("Awake");
+
+            ShowCounter = Config.Bind("GUI", "isGUIOnKey", new KeyboardShortcut(KeyCode.Keypad0));// 이건 단축키
+            ShowCounter2 = Config.Bind("GUI", "isOpenKey", new KeyboardShortcut(KeyCode.KeypadPeriod));// 이건 단축키
+
+            isGUIOn = Config.Bind("GUI", "isGUIOn", true);
+            isOpen = Config.Bind("GUI", "isOpen", true);
+            isOpen.SettingChanged += IsOpen_SettingChanged;
+            uiW = Config.Bind("GUI", "uiW", 300f);
+            uiH = Config.Bind("GUI", "uiH", 600f);
+
+            if (isOpen.Value)
+                windowRect = new Rect(Screen.width - 65, 0, uiW.Value, 800);
+            else
+                windowRect = new Rect(Screen.width - uiW.Value, 0, uiW.Value, 800);
+
+            IsOpen_SettingChanged(null, null);
+
 
             SetMyItemMake();
-            /*
-                        configGreeting = Config.Bind("General",   // The section under which the option is shown
-                                         "GreetingText",  // The key of the configuration option in the configuration file
-                                         "Hello, world!", // The default value
-                                         "A greeting text to show when the game is launched"); // Description of the option to show in the config file
-
-                        configDisplayGreeting = Config.Bind("General.Toggles",
-                                                            "DisplayGreeting",
-                                                            true,
-                                                            "Whether or not to show the greeting text");
-                        //Logger.LogInfo("Hello, world!");
-            */
         }
 
-        // OnGUI 메소드 이름 변경 금지. 유니티에서 자동으로 호출함
-        private void OnGUI()
+        public void IsOpen_SettingChanged(object sender, EventArgs e)
         {
-            CheatMenu();
-        }
-
-        public static void CheatMenu()
-        {
-            float sz = 30f;
-            int ct = 0;
-
-            if (GUI.Button(new Rect(20f, sz * ct++, 130f, 30f), "Cheat Menu"))
+            logger.LogInfo($"IsOpen_SettingChanged {isOpen.Value} , {isGUIOn.Value},{windowRect.x} ");
+            if (isOpen.Value)
             {
-                ShowHide = !ShowHide;
+                title = ShowCounter.Value.ToString() + "," + ShowCounter2.Value.ToString();
+                h = GUILayout.Height(uiH.Value);
+                w = GUILayout.Width(uiW.Value);
+                windowName = FullName;
+                windowRect.x -= (uiW.Value - 64);
             }
-            if (ShowHide)
+            else
             {
-                GUI.Box(new Rect(20f, sz * ct++, 180f, 325f), "Poop");
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Spawn Chosen Items"))
+                title = "";
+                h = GUILayout.Height(40);
+                w = GUILayout.Width(60);
+                windowName = ShortName;
+                windowRect.x += (uiW.Value - 64);
+            }
+        }
+
+
+        public void OnEnable()
+        {
+            Logger.LogWarning("OnEnable");
+            // 하모니 패치
+            try // 가급적 try 처리 해주기. 하모니 패치중에 오류나면 다른 플러그인까지 영향 미침
+            {
+                harmony = Harmony.CreateAndPatchAll(typeof(Lilly));
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e);
+            }
+        }
+
+        public void Update()
+        {
+            if (ShowCounter.Value.IsUp())// 단축키가 일치할때
+            {
+                isGUIOn.Value = !isGUIOn.Value;
+            }
+            if (ShowCounter2.Value.IsUp())// 단축키가 일치할때
+            {
+                isOpen.Value = !isOpen.Value;
+            }
+        }
+
+
+        public void OnGUI()
+        {
+            if (!isGUIOn.Value)
+                return;
+
+            // 창 나가는거 방지
+            windowRect.x = Mathf.Clamp(windowRect.x, -windowRect.width + 4, Screen.width - 4);
+            windowRect.y = Mathf.Clamp(windowRect.y, -windowRect.height + 4, Screen.height - 4);
+            windowRect = GUILayout.Window(windowId, windowRect, WindowFunction, windowName, w, h);
+        }
+
+        int k;
+
+        public virtual void WindowFunction(int id)
+        {
+            GUI.enabled = true; // 기능 클릭 가능
+
+            GUILayout.BeginHorizontal();// 가로 정렬
+                                        // 라벨 추가
+                                        //GUILayout.Label(windowName, GUILayout.Height(20));
+                                        // 안쓰는 공간이 생기더라도 다른 기능으로 꽉 채우지 않고 빈공간 만들기
+            if (isOpen.Value) GUILayout.Label(title);
+            GUILayout.FlexibleSpace();
+
+            if (GUILayout.Button("-", GUILayout.Width(20), GUILayout.Height(20))) { isOpen.Value = !isOpen.Value; }
+            if (GUILayout.Button("x", GUILayout.Width(20), GUILayout.Height(20))) { isGUIOn.Value = false; }
+            GUI.changed = false;
+
+            GUILayout.EndHorizontal();// 가로 정렬 끝
+
+            if (!isOpen.Value) // 닫혔을때
+            {
+            }
+            else // 열렸을때
+            {
+                scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true);
+
+                // 여기에 항목 작성
+
+                if (GUILayout.Button( "Spawn Chosen Items"))
                 {
                     SetItem();
                 }
 
-                if (GUI.Button(new Rect(25f + 170f, sz * ct, 170f, 30f), "my item set"))
+                if (GUILayout.Button("my item set"))
                 {
                     SetMyItem();
                 }
-                myitem = GUI.TextField(new Rect(25f + 170f * 2, sz * ct++, 170f, 30f), myitem);
+                myitem = GUILayout.TextField(myitem);
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "Give Junkan"))
+                GUILayout.Label(" --- ");
+
+                if (GUILayout.Button( "Give Junkan"))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(580).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Give Heart"))
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "Give Heart"))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(85).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
-                if (GUI.Button(new Rect(25f + 170f, sz * ct++, 170f, 30f), "MAX 9 Heart"))
+                if (GUILayout.Button( "MAX 9 Heart"))
                 {
                     SetHealthMaximum();
                 }
+                GUILayout.EndHorizontal();
 
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Give Key"))
+                GUILayout.Label(" --- ");
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "Give Key"))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(67).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
-                if (GUI.Button(new Rect(25f + 170f, sz * ct++, 170f, 30f), "Set 99 Key"))
+                if (GUILayout.Button( "Set 99 Key"))
                 {
                     SetMaxBullets();
                 }
+                GUILayout.EndHorizontal();
 
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Give Blank"))
+                GUILayout.Label(" --- ");
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "Give Blank"))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(224).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
-                if (GUI.Button(new Rect(25f + 170f, sz * ct, 170f, 30f), "Set 99 Blank"))
+                if (GUILayout.Button( "Set 99 Blank"))
                 {
                     SetBlank99();
                 }
-                if (GUI.Button(new Rect(25f + 170f * 2, sz * ct++, 170f, 30f), "Blank!"))
+                GUILayout.EndHorizontal();
+                if (GUILayout.Button( "Blank!"))
                 {
                     SetForceBlank();
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Give Armor"))
+                GUILayout.Label(" --- ");
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "Give Armor"))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(120).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
-                if (GUI.Button(new Rect(25f + 170f, sz * ct++, 170f, 30f), "Set 99 Armor"))
+                if (GUILayout.Button( "Set 99 Armor"))
                 {
                     SetArmor99();
                 }
+                GUILayout.EndHorizontal();
+
+                GUILayout.Label(" --- Reward --- ");
 
                 //상자
-                int xc = 0;
-                if (GUI.Button(new Rect(25f + 30f * xc++, sz * ct, 30f, 30f), "D"))
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "D"))
                 {
                     SetChest(GameManager.Instance.RewardManager.D_Chest);
                 }
-                if (GUI.Button(new Rect(25f + 30f * xc++, sz * ct, 30f, 30f), "C"))
+                if (GUILayout.Button( "C"))
                 {
                     SetChest(GameManager.Instance.RewardManager.C_Chest);
                 }
-                if (GUI.Button(new Rect(25f + 30f * xc++, sz * ct, 30f, 30f), "B"))
+                if (GUILayout.Button( "B"))
                 {
                     SetChest(GameManager.Instance.RewardManager.B_Chest);
                 }
-                if (GUI.Button(new Rect(25f + 30f * xc++, sz * ct, 30f, 30f), "A"))
+                if (GUILayout.Button( "A"))
                 {
                     SetChest(GameManager.Instance.RewardManager.A_Chest);
                 }
-                if (GUI.Button(new Rect(25f + 30f * xc++, sz * ct, 30f, 30f), "S"))
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "S"))
                 {
                     SetChest(GameManager.Instance.RewardManager.S_Chest);
                 }
-                if (GUI.Button(new Rect(25f + 30f * xc++, sz * ct, 30f, 30f), "RB"))
+                if (GUILayout.Button( "RB"))
                 {
                     SetChest(GameManager.Instance.RewardManager.Rainbow_Chest);
                 }
-                if (GUI.Button(new Rect(25f + 30f * xc++, sz * ct, 30f, 30f), "SNG"))
+                if (GUILayout.Button( "SNG"))
                 {
                     SetChest(GameManager.Instance.RewardManager.Synergy_Chest);
                 }
-                ct++;
+                GUILayout.EndHorizontal();
 
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Give 50 Casings"))
+
+                if (GUILayout.Button( "Give 50 Casings"))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(74).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
-                if (GUI.Button(new Rect(25f + 170f, sz * ct++, 170f, 30f), "Set Max Currency"))
+                if (GUILayout.Button("Set Max Currency"))
                 {
                     SetMaxCurrency();
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "Give Hegemony 50 Credit"))
+                if (GUILayout.Button("Give Hegemony 50 Credit"))
                 {
                     for (int j = 0; j < 50; j++)
                     {
@@ -166,49 +280,91 @@ namespace EnterTheGungeon.Lilly.plugins
                     }
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "아이템99개 소지"))
+                if (GUILayout.Button( "아이템99개 소지"))
                 {
                     SetMAX_HELD9();
                 }
-
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "저주 제거"))
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "저주 제거"))
                 {
                     SetClearCurse();
                 }
 
-                if (GUI.Button(new Rect(25f+ 170f, sz * ct++, 170f, 30f), "저주템"))
+                if (GUILayout.Button( "저주템"))
                 {
                     SetMyItemCurse();
                 }
+                GUILayout.EndHorizontal();
 
-
-                if (GUI.Button(new Rect(25f, sz * ct, 170f, 30f), "Drop Passive all"))
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button( "Drop Passive all"))
                 {
                     SetDropPassive(true);
                 }
-                if (GUI.Button(new Rect(25f + 170f, sz * ct++, 170f, 30f), "Drop Passive last"))
+                if (GUILayout.Button( "Drop Passive last"))
                 {
                     SetDropPassive(false);
                 }
+                GUILayout.EndHorizontal();
 
-                stringToEdit = GUI.TextField(new Rect(25f, sz * ct, 170f, 30f), stringToEdit);
-                int k;
-                if (GUI.Button(new Rect(25f + 170f, sz * ct++, 170f, 30f), "Give set id") && int.TryParse(stringToEdit, out k))
+                stringToEdit = GUILayout.TextField( stringToEdit);
+
+                if (GUILayout.Button( "Give set id") && int.TryParse(stringToEdit, out k))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(k).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "탄환의 주인"))
+                if (GUILayout.Button( "탄환의 주인"))
                 {
                     SetMyItem2();
                 }
 
-                if (GUI.Button(new Rect(25f, sz * ct++, 170f, 30f), "item list out"))
+                if (GUILayout.Button( "item list out"))
                 {
                     SetListOut();
                 }
+
+
+
+
+
+
+                GUILayout.EndScrollView();
             }
+            GUI.enabled = true;
+            GUI.DragWindow(); // 창 드레그 가능하게 해줌. 마지막에만 넣어야함
         }
+
+        public void OnDisable()
+        {
+            Logger.LogWarning("OnDisable");
+            harmony?.UnpatchSelf();
+        }
+
+        // ====================== 하모니 패치 샘플 ===================================
+        /*
+         
+        [HarmonyPatch(typeof(XPPicker), MethodType.Constructor)]
+        [HarmonyPostfix]
+        public static void XPPickerCtor(ref float ___pickupRadius)
+        {
+            //logger.LogWarning($"XPPicker.ctor {___pickupRadius}");
+            ___pickupRadius = pickupRadius.Value;
+        }
+
+        [HarmonyPatch(typeof(AEnemy), "DamageMult", MethodType.Setter)]
+        [HarmonyPrefix]
+        public static void SetDamageMult(ref float __0)
+        {
+            if (!eMultOn.Value)
+            {
+                return;
+            }
+            __0 *= eDamageMult.Value;
+        }
+        */
+        // =========================================================
+
 
         public static void SetMyItem2()
         {
@@ -790,7 +946,7 @@ namespace EnterTheGungeon.Lilly.plugins
             randomBenefit.statMods[0].amount = 9;
             randomBenefit.statMods[0].modifyType = StatModifier.ModifyMethod.ADDITIVE;
 
-            
+
             /*            if (randomBenefit.statMods[0].statToBoost == PlayerStats.StatType.Health)
                         {
                             randomBenefit.statMods[0].amount = (float)UnityEngine.Random.Range(1, 3);
@@ -1013,5 +1169,4 @@ namespace EnterTheGungeon.Lilly.plugins
         }
 
     }
-
 }

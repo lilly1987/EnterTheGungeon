@@ -1,5 +1,8 @@
 # EnterTheGungeon Cheat plugins
 
+에픽게임즈 버전
+
+
 ### BepInEx 설치 필요 
 
 https://github.com/BepInEx/BepInEx/releases
