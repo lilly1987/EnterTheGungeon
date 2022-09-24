@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace BepInPluginSample
 {
-    [BepInPlugin("Game.Lilly.Plugin", "Lilly", "1.0")]
+    [BepInPlugin("Game.Lilly.Plugin", "Lilly", "2.1.9.0")]
     public class Lilly : BaseUnityPlugin
     {
         public static ManualLogSource logger;
@@ -26,6 +26,7 @@ namespace BepInPluginSample
         private ConfigEntry<bool> isOpen;
         private ConfigEntry<float> uiW;
         private ConfigEntry<float> uiH;
+
 
         public int windowId = 542;
         public Rect windowRect;
@@ -41,6 +42,7 @@ namespace BepInPluginSample
 
         // ==================
 
+        public static ConfigEntry<bool> noAmmo;
         public static string stringToEdit = "only num";
         public static string myitem = "myitem.txt";
 
@@ -66,7 +68,8 @@ namespace BepInPluginSample
 
             IsOpen_SettingChanged(null, null);
 
-
+            //================
+            noAmmo = Config.Bind("GUI", "noAmmo", true);
             SetMyItemMake();
         }
 
@@ -162,7 +165,9 @@ namespace BepInPluginSample
                 {
                     SetItem();
                 }
-
+                /*
+                if (GUILayout.Button($"탄약 소모 없음 { noAmmo.Value}")){ noAmmo.Value = !noAmmo.Value;  }
+                */
                 if (GUILayout.Button("my item set"))
                 {
                     SetMyItem();
@@ -186,7 +191,7 @@ namespace BepInPluginSample
                 }
                 GUILayout.EndHorizontal();
 
-                GUILayout.Label(" --- ");
+                //GUILayout.Label(" --- ");
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button( "Give Key"))
                 {
@@ -198,7 +203,7 @@ namespace BepInPluginSample
                 }
                 GUILayout.EndHorizontal();
 
-                GUILayout.Label(" --- ");
+                //GUILayout.Label(" --- ");
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button( "Give Blank"))
                 {
@@ -214,7 +219,7 @@ namespace BepInPluginSample
                     SetForceBlank();
                 }
 
-                GUILayout.Label(" --- ");
+                //GUILayout.Label(" --- ");
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button( "Give Armor"))
                 {
@@ -262,6 +267,7 @@ namespace BepInPluginSample
                 }
                 GUILayout.EndHorizontal();
 
+                GUILayout.Label(" --- ");
 
                 if (GUILayout.Button( "Give 50 Casings"))
                 {
@@ -307,12 +313,16 @@ namespace BepInPluginSample
                 }
                 GUILayout.EndHorizontal();
 
+
+                GUILayout.Label(" --- ");
                 stringToEdit = GUILayout.TextField( stringToEdit);
 
                 if (GUILayout.Button( "Give set id") && int.TryParse(stringToEdit, out k))
                 {
                     LootEngine.TryGivePrefabToPlayer(PickupObjectDatabase.GetById(k).gameObject, GameManager.Instance.PrimaryPlayer, true);
                 }
+                GUILayout.Label(" --- ");
+
 
                 if (GUILayout.Button( "탄환의 주인"))
                 {
@@ -352,19 +362,22 @@ namespace BepInPluginSample
             ___pickupRadius = pickupRadius.Value;
         }
 
-        [HarmonyPatch(typeof(AEnemy), "DamageMult", MethodType.Setter)]
-        [HarmonyPrefix]
-        public static void SetDamageMult(ref float __0)
-        {
-            if (!eMultOn.Value)
-            {
-                return;
-            }
-            __0 *= eDamageMult.Value;
-        }
+
         */
         // =========================================================
 
+
+        [HarmonyPatch(typeof(Gun), "LoseAmmo")]
+        [HarmonyPrefix]
+        public static void LoseAmmo(ref int amt)
+        {
+            if (!noAmmo.Value)
+            {
+                return;
+            }
+            logger.LogMessage("LoseAmmo {amt}");
+            amt = 0;
+        }
 
         public static void SetMyItem2()
         {
